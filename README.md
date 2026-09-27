@@ -6,9 +6,10 @@ bricks onto studs, and keep everything on your own disk.
 - The whole [LDraw](https://www.ldraw.org) parts library: 20,000+ real parts, searchable, with thumbnails
 - Snap-to-stud placement with a see-through preview, turning, tilting, multi-select, copy/paste, mirror
 - Paint mode, hide/isolate, undo/redo, autosave with version history
-- Preset catalogs (town, nature, castle, space, interiors) and a browser for official Lego set models
+- Preset catalogs (town, nature, castle, space, interiors, workshop) and a browser for the 1,470 official Lego set models in the LDraw Official Model Repository
+- **Working machines**: mark a part as a motor and press ▶ Run. Gears mesh by real geometry (pitch radius = 1.25 LDU per tooth), speeds and directions pass along the gear train, and anything built on a turning part rides with it. The Workshop presets (a propeller gearbox, a windmill, a carousel) show it off
 - Minifigure builder
-- Display table: put your saved creations out on a table or shelves and look at them together
+- Display table: put your saved creations out on a table or shelves, in daylight, evening or spotlight; machines keep running there
 - High-res pictures, turntable videos, and a build replay of any model
 
 Creations are saved as standard `.ldr` files in `~/Documents/Lego Builder`, so any
@@ -25,6 +26,8 @@ cargo tauri build              # -> src-tauri/target/release/bundle/macos/Lego B
 
 On first launch the app downloads the LDraw parts library (about 145 MB) into
 `~/Library/Application Support/LegoBuilder`.
+
+`node tools/install-workshop.mjs` copies the three Workshop machines into your creations with a saved display, "Claude's workshop".
 
 For development in a normal browser: `node tools/devserver.mjs` and open http://127.0.0.1:5173.
 Tests: `node --test tests/*.test.mjs` and `cd src-tauri && cargo test`.
