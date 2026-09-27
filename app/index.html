@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lego Builder</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+    { "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three/addons/" } }
+  </script>
+</head>
+<body>
+  <div id="app">
+    <header id="topbar">
+      <div class="brand"><span class="logo"></span>Lego Builder</div>
+      <div class="group" id="file-group">
+        <button data-act="new" title="New creation (⌘N)">New</button>
+        <button data-act="open" title="Open creation (⌘O)">Open</button>
+        <button data-act="save" title="Save (⌘S)">Save</button>
+        <input id="model-name" spellcheck="false" aria-label="Creation name">
+        <span id="save-state" class="muted"></span>
+      </div>
+      <div class="group seg" id="tool-group" role="tablist" aria-label="Tool">
+        <button data-tool="build" title="Build (1)">Build</button>
+        <button data-tool="select" title="Select (2)">Select</button>
+        <button data-tool="paint" title="Paint (3)">Paint</button>
+      </div>
+      <div class="group">
+        <button data-act="undo" title="Undo (⌘Z)" aria-label="Undo">↶</button>
+        <button data-act="redo" title="Redo (⇧⌘Z)" aria-label="Redo">↷</button>
+      </div>
+      <div class="spacer"></div>
+      <div class="group">
+        <button data-act="screenshot" title="Save a high-resolution picture">Picture</button>
+        <button data-act="turntable" title="Save a spinning video">Turntable</button>
+        <button data-act="replay" title="Watch it build itself">Replay</button>
+        <button data-act="display" class="accent" title="Your creations on a table">Display table</button>
+      </div>
+    </header>
+
+    <aside id="drawer">
+      <nav class="tabs" role="tablist">
+        <button data-tab="parts" class="on">Parts</button>
+        <button data-tab="presets">Presets</button>
+        <button data-tab="sets">Lego sets</button>
+        <button data-tab="minifig">Minifig</button>
+      </nav>
+      <section data-pane="parts" class="pane on">
+        <input id="part-search" type="search" placeholder="Search 20,000+ parts… (e.g. 2x4, slope, door)" spellcheck="false">
+        <div id="categories" class="chips"></div>
+        <div id="recent-wrap"><h4>Recently used</h4><div id="recent" class="grid small"></div></div>
+        <div id="part-grid" class="grid"></div>
+        <div id="part-count" class="muted"></div>
+      </section>
+      <section data-pane="presets" class="pane"><div id="preset-list"></div></section>
+      <section data-pane="sets" class="pane"><div id="sets"></div></section>
+      <section data-pane="minifig" class="pane"><div id="minifig"></div></section>
+    </aside>
+
+    <main id="viewport">
+      <canvas id="view"></canvas>
+      <div id="hint"></div>
+      <div id="toast" role="status" aria-live="polite"></div>
+      <div id="loading" class="overlay"><div class="card"><div class="spinner"></div><div id="loading-text">Opening the brick box…</div><progress id="loading-bar" max="1" value="0" hidden></progress></div></div>
+    </main>
+
+    <aside id="side">
+      <h3>Color</h3>
+      <div id="color-current"><span class="swatch big"></span><span class="name"></span></div>
+      <div id="color-kinds" class="chips"></div>
+      <div id="colors" class="swatches"></div>
+      <h3>Selection</h3>
+      <div id="selection-info" class="muted">Nothing selected</div>
+      <div id="selection-actions" class="actions">
+        <button data-act="move" title="Pick up and move (G)">Move</button>
+        <button data-act="rotate" title="Turn 90° (R)">Turn</button>
+        <button data-act="mirror" title="Mirror left-right (X)">Mirror</button>
+        <button data-act="duplicate" title="Duplicate (⌘D)">Duplicate</button>
+        <button data-act="paint-sel" title="Paint with current color">Paint</button>
+        <button data-act="hide" title="Hide (H)">Hide</button>
+        <button data-act="isolate" title="Show only this (I)">Isolate</button>
+        <button data-act="save-group" title="Save as a reusable piece">Save as piece</button>
+        <button data-act="delete" class="danger" title="Delete (⌫)">Delete</button>
+      </div>
+      <button data-act="show-all" id="show-all" hidden>Show hidden parts</button>
+      <h3>This creation</h3>
+      <div id="stats" class="muted"></div>
+      <h3>View</h3>
+      <div class="actions">
+        <button data-act="frame" title="Frame (F)">Frame</button>
+        <label class="check"><input type="checkbox" id="opt-edges" checked> Outlines</label>
+        <label class="check"><input type="checkbox" id="opt-ao" checked> Soft shadows</label>
+      </div>
+      <details id="keys"><summary>Keyboard</summary>
+        <dl>
+          <dt>Click</dt><dd>place / select</dd>
+          <dt>Drag</dt><dd>spin view · ⇧drag pan · scroll zoom</dd>
+          <dt>R / ⇧R</dt><dd>turn piece</dd>
+          <dt>T / Y</dt><dd>tip piece forward / sideways</dd>
+          <dt>G</dt><dd>move selection</dd>
+          <dt>Arrows · Q/E</dt><dd>nudge a stud · a plate up/down</dd>
+          <dt>⌘C ⌘V ⌘D</dt><dd>copy · paste · duplicate</dd>
+          <dt>⌥click</dt><dd>place and stop</dd>
+          <dt>Esc</dt><dd>put piece down / deselect</dd>
+          <dt>1 2 3</dt><dd>build · select · paint</dd>
+          <dt>H · I · ⇧H</dt><dd>hide · isolate · show all</dd>
+        </dl>
+      </details>
+    </aside>
+  </div>
+
+  <div id="display" hidden>
+    <canvas id="display-view"></canvas>
+    <div id="display-bar">
+      <button data-dact="back">← Back to building</button>
+      <select id="display-light" aria-label="Lighting">
+        <option value="day">Daylight</option>
+        <option value="evening">Evening</option>
+        <option value="spot">Spotlight</option>
+      </select>
+      <select id="display-furniture" aria-label="Furniture">
+        <option value="table">Table</option>
+        <option value="shelves">Shelves</option>
+        <option value="both">Table + shelves</option>
+      </select>
+      <button data-dact="picture">Picture</button>
+      <button data-dact="turntable">Turntable</button>
+      <span class="spacer"></span>
+      <select id="display-choose" aria-label="Saved displays"></select>
+      <button data-dact="save">Save display</button>
+    </div>
+    <aside id="display-shelf">
+      <h3>Your creations</h3>
+      <p class="muted">Click one to put it out. Click a creation on the table to pick it up again; R turns it, ⌫ puts it away.</p>
+      <div id="display-list"></div>
+    </aside>
+  </div>
+
+  <dialog id="dlg"></dialog>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
