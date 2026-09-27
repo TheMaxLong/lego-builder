@@ -579,7 +579,7 @@ function updateTool() {
 
 function updateHint() {
   const h = $('#hint');
-  if (builder.ghost) h.textContent = 'Click to place · R turn · T/Y tip · ⌥click place & stop · Esc put down';
+  if (builder.ghost) h.textContent = 'Click to place · R / ⇧R turn ↻ ↺ · T/Y tip · ⌥click place & stop · Esc put down';
   else if (builder.tool === 'build') h.textContent = 'Pick a part or preset on the left · drag to spin, scroll to zoom';
   else if (builder.tool === 'select') h.textContent = 'Click parts to select (⇧ to add) · G move · R turn · ⌫ delete';
   else h.textContent = `Click parts to paint them ${colorName(builder.color)}`;
@@ -619,8 +619,10 @@ async function act(a) {
       return B.redo();
     case 'move':
       return B.moveSelection();
-    case 'rotate':
+    case 'rotate': // clockwise seen from above
       return B.ghost ? B.rotateGhost('y', 1) : B.rotateSelection('y', 1);
+    case 'rotate-ccw':
+      return B.ghost ? B.rotateGhost('y', -1) : B.rotateSelection('y', -1);
     case 'mirror':
       return B.mirrorSelection();
     case 'duplicate':
@@ -1034,6 +1036,8 @@ function wireDisplay() {
   $('#display-bar').addEventListener('click', async e => {
     const a = e.target.closest('button')?.dataset.dact;
     if (a === 'back') closeDisplay();
+    if (a === 'cw') room.turnSelected(1);
+    if (a === 'ccw') room.turnSelected(-1);
     if (a === 'picture') {
       const p = await media.picture(room.stage, 'Display');
       toast('Picture saved to Pictures');

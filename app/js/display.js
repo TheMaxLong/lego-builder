@@ -283,7 +283,7 @@ export class DisplayRoom {
   }
 
   turnSelected(n = 1) {
-    if (this.selected) this.selected.holder.rotation.y += (n * Math.PI) / 2;
+    if (this.selected) this.selected.holder.rotation.y -= (n * Math.PI) / 2; // n > 0 = clockwise seen from above, like the builder
   }
 
   toJSON() {

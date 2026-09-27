@@ -74,7 +74,8 @@
       <div id="selection-info" class="muted">Nothing selected</div>
       <div id="selection-actions" class="actions">
         <button data-act="move" title="Pick up and move (G)">Move</button>
-        <button data-act="rotate" title="Turn 90° (R)">Turn</button>
+        <button data-act="rotate-ccw" title="Turn anticlockwise (⇧R)">↺ Turn</button>
+        <button data-act="rotate" title="Turn clockwise (R)">Turn ↻</button>
         <button data-act="mirror" title="Mirror left-right (X)">Mirror</button>
         <button data-act="duplicate" title="Duplicate (⌘D)">Duplicate</button>
         <button data-act="paint-sel" title="Paint with current color">Paint</button>
@@ -97,7 +98,7 @@
         <dl>
           <dt>Click</dt><dd>place / select</dd>
           <dt>Drag</dt><dd>spin view · ⇧drag pan · scroll zoom</dd>
-          <dt>R / ⇧R</dt><dd>turn piece</dd>
+          <dt>R / ⇧R</dt><dd>turn clockwise / anticlockwise</dd>
           <dt>T / Y</dt><dd>tip piece forward / sideways</dd>
           <dt>G</dt><dd>move selection</dd>
           <dt>Arrows · Q/E</dt><dd>nudge a stud · a plate up/down</dd>
@@ -127,6 +128,8 @@
         <option value="both">Table + shelves</option>
       </select>
       <label class="check"><input type="checkbox" id="display-run" checked> Machines run</label>
+      <button data-dact="ccw" title="Turn the selected creation anticlockwise (⇧R)">↺</button>
+      <button data-dact="cw" title="Turn the selected creation clockwise (R)">↻</button>
       <button data-dact="picture">Picture</button>
       <button data-dact="turntable">Turntable</button>
       <span class="spacer"></span>
@@ -135,7 +138,7 @@
     </div>
     <aside id="display-shelf">
       <h3>Your creations</h3>
-      <p class="muted">Click one to put it out. Click a creation on the table to pick it up again; R turns it, ⌫ puts it away.</p>
+      <p class="muted">Click one to put it out. Click a creation to select it, drag to move it; R / ⇧R or ↻ ↺ turn it, ⌫ puts it away.</p>
       <div id="display-list"></div>
     </aside>
   </div>
