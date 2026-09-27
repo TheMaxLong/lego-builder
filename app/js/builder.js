@@ -330,9 +330,14 @@ export class Builder extends EventTarget {
   }
 
   async _snapTarget() {
+    this._side = null;
     const hit = this._pick();
     if (hit) {
       const [nx, ny, nz] = hit.normal;
+      // Pointing at a stud itself (its round side or its top): snap onto that stud.
+      for (const s of await this._worldStuds(hit.part)) {
+        if (Math.hypot(s[0] - hit.point[0], s[2] - hit.point[2]) < 9 && hit.point[1] <= s[1] + 0.5 && hit.point[1] >= s[1] - 5) return [...s];
+      }
       if (ny < -0.7) {
         // Top face: click onto the nearest stud of the part under the cursor.
         const studs = await this._worldStuds(hit.part);
@@ -353,12 +358,31 @@ export class Builder extends EventTarget {
       const info = await lib.partInfo(hit.part.file);
       const box = worldBox(info, hit.part.pos, hit.part.rot);
       const out = [hit.point[0] + nx * 10, 0, hit.point[2] + nz * 10];
+      const axis = Math.abs(nx) >= Math.abs(nz) ? [Math.sign(nx), 0, 0] : [0, 0, Math.sign(nz)];
+      this._side = { axis, box };
       return [snapLattice(out[0]), snapPlate(box.max[1]), snapLattice(out[2])];
     }
     const p = new THREE.Vector3();
     if (!this.raycaster.ray.intersectPlane(this.groundPlane, p)) return null;
     const l = this.stage.toLdraw(p);
     return [snapLattice(l[0]), 0, snapLattice(l[2])];
+  }
+
+  /** Point the ghost at the cursor; when placed beside a part, slide it out until it no longer overlaps. */
+  async _aim() {
+    const t = await this._snapTarget();
+    const g = this.ghost;
+    if (!g) return;
+    g.target = t;
+    if (t && this._side) {
+      const { axis, box } = this._side;
+      for (let i = 0; i < 16; i++) {
+        const placed = this._ghostPlacements();
+        if (!placed.some((p, k) => boxesOverlap(worldBox(g.infos[k], p.pos, p.rot), box, 2))) break;
+        g.target = [g.target[0] + axis[0] * STUD, g.target[1], g.target[2] + axis[2] * STUD];
+      }
+    }
+    this._updateGhost();
   }
 
   // ---------- input ----------
@@ -372,10 +396,7 @@ export class Builder extends EventTarget {
     c.addEventListener('pointermove', async e => {
       this._setPointer(e);
       if (this.ghost) {
-        const t = await this._snapTarget();
-        if (!this.ghost) return;
-        this.ghost.target = t;
-        this._updateGhost();
+        await this._aim();
       } else if (this.tool !== 'build') {
         const hit = this._pick();
         this.hoverId = hit?.part.id ?? null;
@@ -413,7 +434,7 @@ export class Builder extends EventTarget {
   async _dropGhost(e) {
     const g = this.ghost;
     if (!g) return;
-    g.target = await this._snapTarget();
+    await this._aim();
     if (!g.target) return;
     const placed = this._ghostPlacements();
     const step = this.stepCounter++;
