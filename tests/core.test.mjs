@@ -114,3 +114,21 @@ test('flattenModel expands MPD submodels into library parts with composed placem
   assert.equal(byFile['custom.dat'].color, 1);
   assert.deepEqual(f.submodels.map(s => s.file), ['custom.dat']);
 });
+
+test('turning a selection keeps every stud on the lattice', async () => {
+  // builder.js imports three via the browser import map; test the pure helper by extracting it.
+  const src = await fs.readFile(new URL('../app/js/builder.js', import.meta.url), 'utf8');
+  const body = src.slice(src.indexOf('export function latticeCentre'), src.indexOf('export class Builder'));
+  const latticeCentre = new Function(body.replace('export ', '') + '; return latticeCentre;')();
+  const onLattice = v => ((v - 10) % 20 + 20) % 20 === 0;
+  for (const origins of [[[0, -24, 0], [20, -48, 0]], [[10, 0, 10]], [[0, 0, 0], [40, 0, 60], [-20, 0, 20]]]) {
+    const c = latticeCentre(origins);
+    for (let sx = -50; sx <= 50; sx += 20)
+      for (let sz = -50; sz <= 50; sz += 20) {
+        // stud (sx, sz) turned a quarter about c
+        const x = c[0] + (sz - c[2]);
+        const z = c[2] - (sx - c[0]);
+        assert.ok(onLattice(x) && onLattice(z), `stud ${sx},${sz} -> ${x},${z} off lattice for centre ${c}`);
+      }
+  }
+});

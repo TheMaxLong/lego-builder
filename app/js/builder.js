@@ -16,6 +16,19 @@ function placementMatrix(pos, rot) {
 
 const clonePart = p => ({ ...p, pos: [...p.pos], rot: [...p.rot] });
 
+/**
+ * Turning centre that keeps studs on the lattice: a quarter turn about (cx, cz) maps studs
+ * (x,z = 10 mod 20) onto studs only when cx = cz (mod 20) and both are multiples of 10.
+ */
+export function latticeCentre(points) {
+  const xs = points.map(p => p[0]);
+  const zs = points.map(p => p[2]);
+  const cx = Math.round((Math.min(...xs) + Math.max(...xs)) / 2 / 10) * 10;
+  const r = ((cx % 20) + 20) % 20;
+  const cz = Math.round(((Math.min(...zs) + Math.max(...zs)) / 2 - r) / 20) * 20 + r;
+  return [cx, 0, cz];
+}
+
 export class Builder extends EventTarget {
   constructor(stage) {
     super();
@@ -539,12 +552,7 @@ export class Builder extends EventTarget {
   }
 
   _centre(sel) {
-    // Centre snapped so a quarter turn keeps studs on the lattice.
-    const xs = sel.map(p => p.pos[0]);
-    const zs = sel.map(p => p.pos[2]);
-    const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
-    const cz = (Math.min(...zs) + Math.max(...zs)) / 2;
-    return [Math.round(cx / 10) * 10, 0, Math.round(cz / 10) * 10];
+    return latticeCentre(sel.map(p => p.pos));
   }
 
   async nudge(dx, dy, dz) {

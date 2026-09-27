@@ -14,7 +14,7 @@ export async function picture(stage, name, { width = 3200, height = 2000 } = {})
  * Spin the camera once around its target and save an .mp4 (ffmpeg) to Pictures.
  * onProgress(done, total). Returns the video path.
  */
-export async function turntable(stage, name, { seconds = 6, fps = 30, width = 1920, height = 1080, onProgress } = {}) {
+export async function turntable(stage, name, { seconds = 6, fps = 30, width = 1920, height = 1080, onProgress, outDir = null } = {}) {
   if (!(await platform.hasFfmpeg())) throw new Error('Turntable videos need ffmpeg (brew install ffmpeg).');
   const p = await platform.paths();
   const dir = `${p.cache}/frames-${Date.now()}`;
@@ -36,11 +36,13 @@ export async function turntable(stage, name, { seconds = 6, fps = 30, width = 19
       onProgress?.(i + 1, n);
     }
     const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
-    const out = `${store.folder('pictures')}/${store.safeName(name)} turntable ${stamp}.mp4`;
+    const out = `${outDir || store.folder('pictures')}/${store.safeName(name)} turntable ${stamp}.mp4`;
     await platform.encodeVideo(dir, out, fps);
-    for (let i = 0; i < n; i++) await platform.removeFile(`${dir}/frame_${String(i).padStart(5, '0')}.png`);
     return out;
   } finally {
+    // Temporary frames go whether or not the video worked.
+    for (let i = 0; i < n; i++) await platform.removeFile(`${dir}/frame_${String(i).padStart(5, '0')}.png`).catch(() => {});
+    await platform.removeFile(dir).catch(() => {});
     cam.position.copy(start);
     cam.lookAt(target);
     stage.controls.enabled = true;

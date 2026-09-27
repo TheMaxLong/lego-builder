@@ -41,6 +41,9 @@ const ls = {
 };
 
 let stage, builder, room;
+const bootErrors = [];
+addEventListener('error', e => bootErrors.push(String(e.message)));
+addEventListener('unhandledrejection', e => bootErrors.push(String(e.reason?.message || e.reason)));
 let busy = null; // running replay
 
 function toast(msg, ms = 2600) {
@@ -111,6 +114,60 @@ async function boot() {
   updateSelection();
   loading(null);
   window.appReady = true;
+  // Small health report next to the caches: proves a launch worked without anyone looking at the window.
+  setTimeout(async () => {
+    const p = await platform.paths();
+    const report = {
+      at: new Date().toISOString(),
+      app: platform.isApp,
+      catalogParts: catalog.parts.length,
+      colors: lib.colors.length,
+      creation: builder.model.name,
+      modelParts: builder.model.parts.length,
+      partsOnScreen: builder.objects.size,
+      errors: bootErrors.slice(0, 20),
+    };
+    await platform.writeText(p.cache + '/last-boot.json', JSON.stringify(report, null, 1)).catch(() => {});
+    if (await platform.readText(p.cache + '/selftest.flag')) selfTest(p);
+  }, 4000);
+}
+
+/** Exercises the Mac-only bridges (binary writes, web fetch, video) when cache/selftest.flag exists. */
+async function selfTest(p) {
+  const r = {};
+  const step = async (name, fn) => {
+    try {
+      r[name] = (await fn()) ?? 'ok';
+    } catch (e) {
+      r[name] = 'FAIL: ' + (e.message || e);
+    }
+  };
+  await platform.removeFile(p.cache + '/selftest.flag');
+  await step('thumbnail_write', async () => {
+    const url = await thumbs.partThumb('3001.dat');
+    const ok = url && (await fetch(url)).ok;
+    return ok ? 'ok' : 'FAIL: thumbnail not readable';
+  });
+  await step('web_fetch', async () => {
+    const html = await platform.httpGet('https://library.ldraw.org/omr/sets?page=1');
+    return html.includes('omr/sets/') ? 'ok' : 'FAIL: unexpected page';
+  });
+  await step('carry_and_place', async () => {
+    await builder.carryPart('3003.dat');
+    builder._setPointer({ clientX: innerWidth / 2 + 150, clientY: innerHeight / 2 });
+    const before = builder.model.parts.length;
+    await builder._dropGhost({ altKey: true });
+    const placed = builder.model.parts.length - before;
+    await builder.undo();
+    return placed === 1 && builder.model.parts.length === before ? 'ok' : `FAIL: placed ${placed}, after undo ${builder.model.parts.length}`;
+  });
+  await step('video', async () => (await platform.hasFfmpeg() ? media.turntable(stage, 'selftest', { seconds: 1, fps: 4, width: 320, height: 200, outDir: p.cache + '/selftest' }).then(async v => {
+            await platform.removeFile(v);
+            await platform.removeFile(p.cache + '/selftest');
+            const left = (await platform.listDir(p.cache)).filter(e => e.name.startsWith('frames-'));
+            return left.length ? 'FAIL: temp frames left behind' : 'ok (video made, temp frames cleaned)';
+          }) : 'skipped: no ffmpeg'));
+  await platform.writeText(p.cache + '/last-selftest.json', JSON.stringify({ at: new Date().toISOString(), ...r }, null, 1));
 }
 
 // ---------------- creations: new / open / save ----------------

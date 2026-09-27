@@ -169,6 +169,10 @@ fn remove_file(path: String) -> Result<(), String> {
     if !(p.starts_with(support_dir().join("cache")) || p.starts_with(data_dir().join(".history"))) {
         return Err("remove only allowed in cache/history".into());
     }
+    if p.is_dir() {
+        // only ever an emptied temp folder (turntable frames)
+        return fs::remove_dir(&p).map_err(|e| e.to_string());
+    }
     match fs::remove_file(&p) {
         Ok(()) => Ok(()),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
@@ -312,14 +316,21 @@ async fn encode_video(frames_dir: String, out_path: String, fps: u32) -> Result<
     let frames = guard(&frames_dir)?;
     let out = guard(&out_path)?;
     let bin = ffmpeg().ok_or("ffmpeg is not installed")?;
-    let status = Command::new(bin)
+    if let Some(parent) = out.parent() {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let result = Command::new(bin)
         .args(["-y", "-loglevel", "error", "-framerate", &fps.to_string(), "-i"])
         .arg(frames.join("frame_%05d.png"))
         .args(["-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "18"])
         .arg(&out)
-        .status()
+        .output()
         .map_err(|e| e.to_string())?;
-    if status.success() { Ok(()) } else { Err("ffmpeg failed".into()) }
+    if result.status.success() {
+        Ok(())
+    } else {
+        Err(format!("ffmpeg failed: {}", String::from_utf8_lossy(&result.stderr).trim()))
+    }
 }
 
 #[tauri::command]

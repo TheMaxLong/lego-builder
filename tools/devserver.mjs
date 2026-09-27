@@ -75,7 +75,9 @@ const commands = {
   async remove_file({ path: p }) {
     const g = guard(p);
     if (!(g.startsWith(path.join(SUPPORT, 'cache')) || g.startsWith(path.join(DATA, '.history')))) throw new Error('remove only allowed in cache/history');
-    await fs.rm(g, { force: true });
+    const st = await fs.stat(g).catch(() => null);
+    if (st?.isDirectory()) await fs.rmdir(g);
+    else await fs.rm(g, { force: true });
     return null;
   },
   async scan_headers({ path: p }) {
@@ -126,6 +128,7 @@ const commands = {
   async encode_video({ framesDir, outPath, fps }) {
     const frames = guard(framesDir);
     const out = guard(outPath);
+    await fs.mkdir(path.dirname(out), { recursive: true });
     await run('/opt/homebrew/bin/ffmpeg', ['-y', '-loglevel', 'error', '-framerate', String(fps), '-i', path.join(frames, 'frame_%05d.png'), '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '18', out]);
     return null;
   },
