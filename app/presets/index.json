@@ -1,0 +1,212 @@
+[
+ {
+  "name": "Town",
+  "blurb": "Houses, streets and the bits in between",
+  "items": [
+   {
+    "file": "grass-plot.ldr",
+    "title": "Grass plot",
+    "desc": "A green 16 × 16 baseplate",
+    "parts": 1
+   },
+   {
+    "file": "house.ldr",
+    "title": "House",
+    "desc": "Two windows, a front door and a pitched red roof",
+    "parts": 113
+   },
+   {
+    "file": "fence.ldr",
+    "title": "Fence",
+    "desc": "A 16-stud run of white lattice fence",
+    "parts": 4
+   },
+   {
+    "file": "picket-fence-corner.ldr",
+    "title": "Fence corner",
+    "desc": "Two spindled fence runs meeting at a post",
+    "parts": 6
+   },
+   {
+    "file": "road.ldr",
+    "title": "Road",
+    "desc": "A 32 × 32 straight road baseplate",
+    "parts": 1
+   },
+   {
+    "file": "crossroads.ldr",
+    "title": "Crossroads",
+    "desc": "A 32 × 32 crossroads baseplate",
+    "parts": 1
+   },
+   {
+    "file": "street-lamp.ldr",
+    "title": "Street lamp",
+    "desc": "A tall black lamppost with a glowing top",
+    "parts": 3
+   },
+   {
+    "file": "mailbox.ldr",
+    "title": "Mailbox",
+    "desc": "Blue post box with a letter slot",
+    "parts": 5
+   },
+   {
+    "file": "bench.ldr",
+    "title": "Park bench",
+    "desc": "A brown wooden bench",
+    "parts": 7
+   },
+   {
+    "file": "car.ldr",
+    "title": "Small car",
+    "desc": "A red two-seater with a clear windscreen",
+    "parts": 16
+   }
+  ]
+ },
+ {
+  "name": "Nature",
+  "blurb": "Trees, flowers, rocks and water",
+  "items": [
+   {
+    "file": "oak-tree.ldr",
+    "title": "Oak tree",
+    "desc": "Round leafy tree on a brown trunk",
+    "parts": 3
+   },
+   {
+    "file": "pine-tree.ldr",
+    "title": "Pine tree",
+    "desc": "Tall pointed evergreen",
+    "parts": 2
+   },
+   {
+    "file": "bush.ldr",
+    "title": "Bush",
+    "desc": "Low round bush",
+    "parts": 2
+   },
+   {
+    "file": "flower-bed.ldr",
+    "title": "Flower bed",
+    "desc": "Brown soil with red, yellow and white flowers",
+    "parts": 9
+   },
+   {
+    "file": "pond.ldr",
+    "title": "Pond",
+    "desc": "A little pond of see-through blue tiles",
+    "parts": 12
+   },
+   {
+    "file": "rocks.ldr",
+    "title": "Rocks",
+    "desc": "A pile of grey stone",
+    "parts": 5
+   },
+   {
+    "file": "hill.ldr",
+    "title": "Grassy hill",
+    "desc": "A stepped hill with sloped sides",
+    "parts": 14
+   }
+  ]
+ },
+ {
+  "name": "Castle",
+  "blurb": "Walls, towers and a way in",
+  "items": [
+   {
+    "file": "castle-wall.ldr",
+    "title": "Wall section",
+    "desc": "Grey stone wall with battlements",
+    "parts": 15
+   },
+   {
+    "file": "castle-tower.ldr",
+    "title": "Corner tower",
+    "desc": "Square tower with arrow slits and a lookout mast",
+    "parts": 74
+   },
+   {
+    "file": "gatehouse.ldr",
+    "title": "Gatehouse",
+    "desc": "An arched gate between two pillars",
+    "parts": 22
+   },
+   {
+    "file": "drawbridge.ldr",
+    "title": "Drawbridge",
+    "desc": "Wooden bridge planks over a moat",
+    "parts": 20
+   }
+  ]
+ },
+ {
+  "name": "Space",
+  "blurb": "Pads, rovers and ships",
+  "items": [
+   {
+    "file": "landing-pad.ldr",
+    "title": "Landing pad",
+    "desc": "Grey pad with yellow landing marks and lights",
+    "parts": 36
+   },
+   {
+    "file": "rover.ldr",
+    "title": "Rover",
+    "desc": "Six-stud rover with a dish antenna",
+    "parts": 17
+   },
+   {
+    "file": "shuttle.ldr",
+    "title": "Space shuttle",
+    "desc": "White shuttle with swept wings and a blue canopy",
+    "parts": 31
+   },
+   {
+    "file": "antenna-tower.ldr",
+    "title": "Antenna tower",
+    "desc": "Radar dish on a tall mast",
+    "parts": 4
+   }
+  ]
+ },
+ {
+  "name": "Interiors",
+  "blurb": "Furniture for inside the house",
+  "items": [
+   {
+    "file": "table.ldr",
+    "title": "Table",
+    "desc": "Four-legged wooden table",
+    "parts": 9
+   },
+   {
+    "file": "chair.ldr",
+    "title": "Chair",
+    "desc": "A wooden minifig chair",
+    "parts": 1
+   },
+   {
+    "file": "bed.ldr",
+    "title": "Bed",
+    "desc": "Bed with a white sheet and red blanket",
+    "parts": 13
+   },
+   {
+    "file": "kitchen-counter.ldr",
+    "title": "Kitchen counter",
+    "desc": "Cupboards with a counter top and a tap",
+    "parts": 7
+   },
+   {
+    "file": "bookshelf.ldr",
+    "title": "Bookshelf",
+    "desc": "Tall shelf full of colourful books",
+    "parts": 37
+   }
+  ]
+ }
+]
