@@ -9,6 +9,24 @@ import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { OutlinePass } from 'three/addons/postprocessing/OutlinePass.js';
 
+/**
+ * PNG of a canvas. WKWebView sometimes hands toBlob a null (e.g. while the window is behind others),
+ * so fall back to the synchronous data URL, which reads the preserved drawing buffer.
+ */
+export async function canvasToBlob(canvas) {
+  const blob = await new Promise(ok => {
+    const t = setTimeout(() => ok(null), 3000); // a hidden window can leave toBlob hanging
+    canvas.toBlob(b => (clearTimeout(t), ok(b)), 'image/png');
+  });
+  if (blob) return blob;
+  const url = canvas.toDataURL('image/png');
+  const bin = atob(url.slice(url.indexOf(',') + 1));
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  if (bytes.length < 100) throw new Error('the 3D view could not be captured');
+  return new Blob([bytes], { type: 'image/png' });
+}
+
 export class Stage {
   constructor(canvas, { background = 0xdfe6ee } = {}) {
     this.canvas = canvas;
@@ -180,7 +198,7 @@ export class Stage {
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
     this.render();
-    const blob = await new Promise(ok => r.domElement.toBlob(ok, 'image/png'));
+    const blob = await canvasToBlob(r.domElement);
     r.setPixelRatio(oldRatio);
     this.composer.setPixelRatio(oldRatio);
     r.setSize(oldSize.x, oldSize.y, false);

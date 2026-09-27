@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import * as platform from './platform.js';
 import * as lib from './library.js';
+import { canvasToBlob } from './scene.js';
 
 const SIZE = 192;
 let renderer, scene, camera, root, dir;
@@ -49,7 +50,7 @@ export async function renderObject(obj, size = SIZE) {
   camera.lookAt(c);
   renderer.render(scene, camera);
   root.remove(obj);
-  const blob = await new Promise(ok => renderer.domElement.toBlob(ok, 'image/png'));
+  const blob = await canvasToBlob(renderer.domElement);
   renderer.setSize(SIZE, SIZE, false);
   return blob;
 }
