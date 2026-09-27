@@ -34,6 +34,7 @@
         <button data-act="screenshot" title="Save a high-resolution picture">Picture</button>
         <button data-act="turntable" title="Save a spinning video">Turntable</button>
         <button data-act="replay" title="Watch it build itself">Replay</button>
+        <button data-act="run" title="Run the machines: motors turn, gears pass it on (Space)">▶ Run</button>
         <button data-act="display" class="accent" title="Your creations on a table">Display table</button>
       </div>
     </header>
@@ -80,6 +81,7 @@
         <button data-act="hide" title="Hide (H)">Hide</button>
         <button data-act="isolate" title="Show only this (I)">Isolate</button>
         <button data-act="save-group" title="Save as a reusable piece">Save as piece</button>
+        <button data-act="motor" title="Make this part a motor: it turns its axle when you press Run">Motor</button>
         <button data-act="delete" class="danger" title="Delete (⌫)">Delete</button>
       </div>
       <button data-act="show-all" id="show-all" hidden>Show hidden parts</button>
@@ -102,6 +104,7 @@
           <dt>⌘C ⌘V ⌘D</dt><dd>copy · paste · duplicate</dd>
           <dt>⌥click</dt><dd>place and stop</dd>
           <dt>Esc</dt><dd>put piece down / deselect</dd>
+          <dt>Space</dt><dd>run / stop machines</dd>
           <dt>1 2 3</dt><dd>build · select · paint</dd>
           <dt>H · I · ⇧H</dt><dd>hide · isolate · show all</dd>
         </dl>
@@ -123,6 +126,7 @@
         <option value="shelves">Shelves</option>
         <option value="both">Table + shelves</option>
       </select>
+      <label class="check"><input type="checkbox" id="display-run" checked> Machines run</label>
       <button data-dact="picture">Picture</button>
       <button data-dact="turntable">Turntable</button>
       <span class="spacer"></span>

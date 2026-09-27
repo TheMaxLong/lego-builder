@@ -73,6 +73,14 @@ class Model {
     this.parts.push(p);
     return p;
   }
+  /** Exact LDraw placement (Technic parts that sit in holes, not on studs). */
+  raw(file, color, pos, rot = IDENTITY, motor = 0) {
+    file = file.endsWith('.dat') ? file : file + '.dat';
+    const p = { id: this.parts.length + 1, file, color, pos, rot: [...rot], step: this.step };
+    if (motor) p.motor = motor;
+    this.parts.push(p);
+    return p;
+  }
   /** Same position/rotation as another part (glass in a window, door in a frame). */
   with(host, file, color, offset = [0, 0, 0], extra = IDENTITY) {
     file = file.endsWith('.dat') ? file : file + '.dat';
@@ -512,6 +520,82 @@ await make(home, 'bookshelf', 'Bookshelf', 'Tall shelf full of colourful books',
   await m.at('3710', C.reddishBrown, 0, 0, 12);
   for (const x of [0, 3]) for (let r = 0; r < 4; r++) await m.at('3005', C.reddishBrown, x, 1, r * 3);
   await m.at('3710', C.reddishBrown, 0, 1, 12);
+});
+
+
+// ---- Workshop: machines that actually move (press Run machines) ----
+const workshop = category('Workshop', 'Machines with real gear trains — press ▶ Run');
+const ALONG_Z = quarterTurn('y', 1); // turns an axle (long along x) to run front-to-back
+
+/** A standing minifig: feet on y=0 at (x, z); x must be a multiple of 20, z = 10 mod 20. */
+function figure(m, x, z, torso, torsoColor, legsColor, hat, hatColor, head = '3626c') {
+  m.raw('970c00', legsColor, [x, -40, z]);
+  m.raw(torso, torsoColor, [x, -72, z]);
+  m.raw(head, C.yellow, [x, -96, z]);
+  if (hat) m.raw(hat, hatColor, [x, -96, z]);
+}
+
+await make(workshop, 'propeller-gearbox', 'Propeller gearbox', 'Turn the red hand wheel: 40 → 8 → 24 → 24 teeth spins the propeller 5× faster', async m => {
+  await slab(m, C.dbg, 0, -2, 12, 8, -1);
+  m.nextStep();
+  // Two side walls, three storeys; the top storey is a Technic brick with holes at y = -94.
+  for (const z of [0, 4]) {
+    await m.at('6112', C.lbg, 0, z, 0);
+    await m.at('60479', C.lbg, 0, z, 3);
+    await m.at('60479', C.lbg, 0, z, 4);
+    await m.at('6112', C.lbg, 0, z, 5);
+    await m.at('60479', C.lbg, 0, z, 8);
+    await m.at('60479', C.lbg, 0, z, 9);
+    await m.at('3895', C.dbg, 0, z, 10);
+  }
+  m.nextStep();
+  const Y = -94;
+  // Shaft 1 (x=60): hand wheel outside the front wall is the motor, 40-tooth gear inside.
+  m.raw('3706', C.black, [60, Y, 40], ALONG_Z);
+  m.raw('3648b', C.red, [60, Y, -10], IDENTITY, 10);
+  m.raw('3649', C.lbg, [60, Y, 30]);
+  // Shaft 2 (x=120): 8-tooth pinion on the 40, 24-tooth passes it along.
+  m.raw('32073', C.black, [120, Y, 50], ALONG_Z);
+  m.raw('3647', C.dbg, [120, Y, 30]);
+  m.raw('3648b', C.lbg, [120, Y, 50]);
+  // Shaft 3 (x=180): 24-tooth, propeller out front.
+  m.raw('3706', C.black, [180, Y, 40], ALONG_Z);
+  m.raw('3648b', C.lbg, [180, Y, 50]);
+  m.raw('41530', C.yellow, [180, Y, -10]);
+  m.nextStep();
+  figure(m, 20, -30, '76382p7o', C.blue, C.blue, '3833', C.yellow);
+});
+
+await make(workshop, 'windmill', 'Windmill', 'Brick tower with four sails on a turning axle', async m => {
+  await m.at('41539', C.green, 0, 0, -1);
+  m.nextStep();
+  const X0 = 1, Z0 = 1, S = 6, rows = 7;
+  const door = [{ from: 2, to: 4, rowFrom: 0, rowTo: 2 }];
+  await wall(m, C.white, X0, Z0, S, 'x', rows, 0, door);
+  await wall(m, C.white, X0, Z0 + S - 1, S, 'x', rows, 0);
+  await wall(m, C.white, X0, Z0 + 1, S - 2, 'z', rows, 0, [{ from: 1, to: 3, rowFrom: 3, rowTo: 5 }]);
+  await wall(m, C.white, X0 + S - 1, Z0 + 1, S - 2, 'z', rows, 0, [{ from: 1, to: 3, rowFrom: 3, rowTo: 5 }]);
+  await m.at('3659', C.white, X0 + 1, Z0, 6); // arch over the door
+  m.nextStep();
+  // Top storey: Technic bricks front and back carry the sail axle.
+  const L = rows * 3;
+  await m.at('3894', C.reddishBrown, X0, Z0, L);
+  await m.at('3894', C.reddishBrown, X0, Z0 + S - 1, L);
+  await m.at('3710', C.reddishBrown, X0, Z0 + 1, L, 1);
+  await m.at('3710', C.reddishBrown, X0 + S - 1, Z0 + 1, L, 1);
+  m.nextStep();
+  await slab(m, C.reddishBrown, X0, Z0, S, S, L + 3);
+  await roof(m, C.darkRed, X0, Z0, S, S, L + 4);
+  m.nextStep();
+  const cx = X0 * 20 + 60;
+  const y = -(L + 3) * 8 + 10;
+  const zf = Z0 * 20;
+  m.raw('3707', C.black, [cx, y, zf + 30], ALONG_Z); // 8 long: from 50 in front to the back wall
+  m.raw('3713', C.lbg, [cx, y, zf - 10]);
+  m.raw('2952', C.white, [cx, y, zf - 30], IDENTITY, 8);
+  m.raw('2952', C.white, [cx, y, zf - 30], quarterTurn('z', 1));
+  m.nextStep();
+  figure(m, 60, 150, '76382p0e', C.white, C.sand, '3901', C.reddishBrown); // the miller, behind the tower and clear of the sails
 });
 
 await fs.writeFile(path.join(OUT, 'index.json'), JSON.stringify(catalog, null, 1));

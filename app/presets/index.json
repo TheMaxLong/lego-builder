@@ -208,5 +208,23 @@
     "parts": 37
    }
   ]
+ },
+ {
+  "name": "Workshop",
+  "blurb": "Machines with real gear trains — press ▶ Run",
+  "items": [
+   {
+    "file": "propeller-gearbox.ldr",
+    "title": "Propeller gearbox",
+    "desc": "Turn the red hand wheel: 40 → 8 → 24 → 24 teeth spins the propeller 5× faster",
+    "parts": 35
+   },
+   {
+    "file": "windmill.ldr",
+    "title": "Windmill",
+    "desc": "Brick tower with four sails on a turning axle",
+    "parts": 71
+   }
+  ]
  }
 ]

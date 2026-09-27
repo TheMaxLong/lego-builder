@@ -18,6 +18,7 @@ export async function modelObject(model) {
     o.matrixAutoUpdate = false;
     o.matrix.copy(placementMatrix(p.pos, p.rot));
     o.userData.step = p.step ?? 0;
+    o.userData.partId = p.id;
     g.add(o);
   });
   return g;

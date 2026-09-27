@@ -132,3 +132,41 @@ test('turning a selection keeps every stud on the lattice', async () => {
       }
   }
 });
+
+test('every preset only uses parts that exist in the library', async () => {
+  const dir = new URL('../app/presets/', import.meta.url);
+  const index = JSON.parse(await fs.readFile(new URL('index.json', dir), 'utf8'));
+  let checked = 0;
+  for (const cat of index)
+    for (const it of cat.items) {
+      const m = parseLdr(await fs.readFile(new URL(it.file, dir), 'utf8'));
+      assert.equal(m.parts.length, it.parts, `${it.file} part count`);
+      for (const p of m.parts) assert.ok((await getText(p.file)) != null, `${it.file}: missing ${p.file}`);
+      checked++;
+    }
+  assert.ok(checked >= 30, `only ${checked} presets`);
+});
+
+test('propeller gearbox: meshes are found and the propeller turns 5x the hand wheel', async () => {
+  const { analyze } = await import('../app/js/mechanics.js');
+  const m = parseLdr(await fs.readFile(new URL('../app/presets/propeller-gearbox.ldr', import.meta.url), 'utf8'));
+  assert.equal(m.parts.filter(p => p.motor).length, 1, 'the hand wheel is the motor');
+  const titles = new Map();
+  const title = f => titles.get(f);
+  for (const p of m.parts) titles.set(p.file, ((await getText(p.file)) || '').split('\n')[0].replace(/^0\s*/, ''));
+  const r = await analyze(m.parts, f => analyzePart(f, getText), title);
+  assert.equal(r.meshes.length, 2, 'two gear meshes (40→8, 24→24)');
+  const rpm = s => Math.round((s.omega * 60) / (2 * Math.PI));
+  const byX = x => r.shafts.find(s => Math.abs(s.point[0] - x) < 1);
+  assert.equal(rpm(byX(60)), 10);
+  assert.equal(rpm(byX(120)), -50); // 40/8 = 5x, reversed
+  assert.equal(rpm(byX(180)), 50); // 24/24 = 1x, reversed again
+  const prop = m.parts.find(p => p.file === '41530.dat');
+  assert.ok(byX(180).ids.includes(prop.id), 'propeller rides on shaft 3');
+});
+
+test('motor marks survive save and load', () => {
+  const m = { name: 'M', parts: [{ id: 1, file: '3647.dat', color: 0, pos: [0, 0, 0], rot: [...IDENTITY], step: 0, motor: 12 }], submodels: [] };
+  const back = parseLdr(serializeLdr(m));
+  assert.equal(back.parts[0].motor, 12);
+});

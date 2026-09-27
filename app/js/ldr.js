@@ -40,13 +40,15 @@ export function parseLdr(text, fallbackName = 'Untitled') {
 
   let name = fallbackName;
   let step = 0;
+  let motor = 0; // "0 !BUILDER MOTOR <rpm>" marks the next part as a motor (other programs ignore it)
   const parts = [];
   for (const line of main.lines) {
     const t = line.trim();
     if (!t) continue;
     const tok = t.split(/\s+/);
     if (tok[0] === '0') {
-      if (/^0\s+(STEP|ROTSTEP)\b/i.test(t)) step++;
+      if (/^0\s+!BUILDER\s+MOTOR\s+/i.test(t)) motor = Number(tok[3]) || 0;
+      else if (/^0\s+(STEP|ROTSTEP)\b/i.test(t)) step++;
       else if (/^0\s+Name:/i.test(t)) name = t.replace(/^0\s+Name:\s*/i, '').replace(/\.(ldr|mpd|dat)$/i, '') || name;
       continue;
     }
@@ -55,14 +57,17 @@ export function parseLdr(text, fallbackName = 'Untitled') {
     const nums = tok.slice(2, 14).map(Number);
     if (nums.some(Number.isNaN)) continue;
     const file = tok.slice(14).join(' ').replace(/\\/g, '/');
-    parts.push({
+    const part = {
       id: newId(),
       file,
       color: /^\d+$/.test(color) ? Number(color) : color,
       pos: nums.slice(0, 3),
       rot: nums.slice(3, 12),
       step,
-    });
+    };
+    if (motor) part.motor = motor;
+    motor = 0;
+    parts.push(part);
   }
   return { name, parts, submodels };
 }
@@ -75,6 +80,7 @@ export function serializeLdr(model) {
   for (const p of sorted) {
     if (step !== null && (p.step ?? 0) !== step) out.push('0 STEP');
     step = p.step ?? 0;
+    if (p.motor) out.push(`0 !BUILDER MOTOR ${fmt(p.motor)}`);
     out.push(['1', p.color, ...p.pos.map(fmt), ...p.rot.map(fmt), p.file].join(' '));
   }
   if (sorted.length) out.push('0 STEP');
@@ -142,7 +148,9 @@ export function flattenModel(model) {
         walk(parseLdr(sub).parts, pos, rot, color, step ?? p.step, depth + 1);
       } else {
         if (sub != null) keep.push(p.file.toLowerCase());
-        out.push({ id: newId(), file: p.file, color, pos: pos.map(v => Math.round(v * 1000) / 1000), rot: roundRot(rot), step: step ?? p.step });
+        const flat = { id: newId(), file: p.file, color, pos: pos.map(v => Math.round(v * 1000) / 1000), rot: roundRot(rot), step: step ?? p.step };
+        if (p.motor) flat.motor = p.motor;
+        out.push(flat);
       }
     }
   };

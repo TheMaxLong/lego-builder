@@ -12,6 +12,7 @@ import { Stage } from './scene.js';
 import { Builder } from './builder.js';
 import { DisplayRoom } from './display.js';
 import { modelObject, missingParts } from './models.js';
+import { mechanismFor, Spinner } from './spin.js';
 import { parseLdr, flattenModel, newId, IDENTITY } from './ldr.js';
 
 const $ = s => document.querySelector(s);
@@ -45,6 +46,8 @@ const bootErrors = [];
 addEventListener('error', e => bootErrors.push(String(e.message)));
 addEventListener('unhandledrejection', e => bootErrors.push(String(e.reason?.message || e.reason)));
 let busy = null; // running replay
+let spinner = null; // running machines in the builder
+const partTitle = file => catalog.byFile(file)?.title || '';
 
 function toast(msg, ms = 2600) {
   const t = $('#toast');
@@ -235,7 +238,27 @@ async function renameTo(raw) {
   toast(`Renamed to “${name}”`);
 }
 
+async function setRunning(on) {
+  spinner?.stop();
+  spinner = null;
+  const btn = $('[data-act="run"]');
+  btn.classList.toggle('on', on);
+  btn.textContent = on ? '■ Stop' : '▶ Run';
+  if (!on) return;
+  builder.cancelGhost();
+  const { entries, report } = await mechanismFor(builder.model.parts, builder.objects, lib.partInfo, partTitle);
+  if (!entries.length) {
+    btn.classList.remove('on');
+    btn.textContent = '▶ Run';
+    return toast(report.gears ? 'Nothing is driving the gears — select a gear or axle and press Motor.' : 'No machines here yet — try the Workshop presets, or add Technic gears and a motor.', 6000);
+  }
+  spinner = new Spinner(stage, entries);
+  const turning = report.shafts.filter(s => s.omega).length;
+  toast(`${turning} shaft${turning === 1 ? '' : 's'} turning · ${report.meshes.length} gear mesh${report.meshes.length === 1 ? '' : 'es'}`);
+}
+
 function onModelChange() {
+  if (spinner) setRunning(false);
   $('#save-state').textContent = 'Editing…';
   autosave();
   updateStats();
@@ -254,6 +277,25 @@ function dialog(title, bodyHtml, buttons = []) {
   buttons.forEach((b, i) => (d.querySelector(`[data-b="${i}"]`).onclick = () => b.onClick?.(d)));
   d.showModal();
   return d;
+}
+
+/** In-app name box (the Mac app's web view has no native prompt dialog). */
+function askName(title, value) {
+  return new Promise(resolve => {
+    const d = dialog(title, `<input id="ask-name" value="${esc(value)}" spellcheck="false" aria-label="Name">`, [
+      { label: 'Cancel', onClick: dd => (dd.close(), resolve(null)) },
+      { label: 'Save', cls: 'accent', onClick: dd => (dd.close(), resolve(dd.querySelector('#ask-name').value.trim() || null)) },
+    ]);
+    const input = d.querySelector('#ask-name');
+    input.select();
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        d.close();
+        resolve(input.value.trim() || null);
+      }
+    });
+    d.addEventListener('close', () => resolve(null), { once: true });
+  });
 }
 
 async function openDialog() {
@@ -488,7 +530,7 @@ function updateSelection() {
   if (!sel.length) info.textContent = builder.ghost ? 'Holding a piece — click to place' : 'Nothing selected';
   else if (sel.length === 1) {
     const p = sel[0];
-    info.innerHTML = `<b>${esc(catalog.byFile(p.file)?.title || p.file)}</b><br>${esc(colorName(p.color))} · ${esc(p.file.replace(/\.dat$/i, ''))}`;
+    info.innerHTML = `<b>${esc(catalog.byFile(p.file)?.title || p.file)}</b><br>${esc(colorName(p.color))} · ${esc(p.file.replace(/\.dat$/i, ''))}${p.motor ? ` · <b>motor ${p.motor} rpm</b>` : ''}`;
   } else info.textContent = `${sel.length} parts selected`;
   $$('#selection-actions button').forEach(b => (b.disabled = !sel.length));
 }
@@ -573,7 +615,7 @@ async function act(a) {
     case 'save-group': {
       const sel = B.selectedParts();
       if (!sel.length) return;
-      const name = prompt('Name this piece:', 'My piece');
+      const name = await askName('Name this piece', 'My piece');
       if (!name) return;
       const n = await store.savePiece(name, sel);
       toast(`Saved “${n}” to My pieces (Presets tab)`);
@@ -597,6 +639,16 @@ async function act(a) {
       return;
     case 'display':
       return openDisplay();
+    case 'run':
+      return setRunning(!spinner);
+    case 'motor': {
+      const sel = B.selectedParts();
+      if (!sel.length) return;
+      const on = !sel.some(p => p.motor);
+      const ids = new Set(sel.map(p => p.id));
+      await B.commit(parts => parts.forEach(p => ids.has(p.id) && (on ? (p.motor = 12) : delete p.motor)));
+      return toast(on ? 'Motor on — press ▶ Run to see it go' : 'Motor removed');
+    }
   }
 }
 
@@ -643,6 +695,7 @@ function wireKeys() {
     else if (cmd && k === 'd') B.duplicate();
     else if (cmd && k === 'a') B.selectAll();
     else if (cmd) handled = false;
+    else if (k === ' ') act('run');
     else if (k === 'escape') {
       if (busy) busy.stop();
       else if (B.ghost) B.cancelGhost(), updateHint();
@@ -898,7 +951,7 @@ async function openDisplay() {
   $('#display').hidden = false;
   stage.paused = true;
   if (!room) {
-    room = new DisplayRoom($('#display-view'));
+    room = new DisplayRoom($('#display-view'), { info: lib.partInfo, title: partTitle });
     window.app.room = room;
     wireDisplay();
     const last = ls.get('lastDisplay', null);
@@ -937,6 +990,7 @@ function wireDisplay() {
     }
   });
   $('#display-light').addEventListener('change', e => room.setLight(e.target.value));
+  $('#display-run').addEventListener('change', e => room.setRunning(e.target.checked));
   $('#display-furniture').addEventListener('change', e => room.setFurniture(e.target.value));
   $('#display-choose').addEventListener('change', async e => {
     if (!e.target.value) return;
@@ -957,7 +1011,7 @@ function wireDisplay() {
     }
     if (a === 'turntable') runTurntable(room.stage, 'Display');
     if (a === 'save') {
-      const name = prompt('Name this display:', ls.get('lastDisplay', 'My display'));
+      const name = await askName('Name this display', ls.get('lastDisplay', 'My display'));
       if (!name) return;
       const n = await store.saveDisplay(name, room.toJSON());
       ls.set('lastDisplay', n);

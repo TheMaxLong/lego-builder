@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { Stage } from './scene.js';
 import { modelObject } from './models.js';
 import * as store from './store.js';
+import { mechanismFor, Spinner } from './spin.js';
 
 const TABLE = { w: 280, d: 150, top: 0, thick: 5, legH: 80 };
 const FLOOR_Y = -TABLE.legH - TABLE.thick;
@@ -47,8 +48,10 @@ function woodTexture(base = '#a8733f', dark = '#8a5a2e') {
 }
 
 export class DisplayRoom {
-  constructor(canvas) {
+  constructor(canvas, { info, title } = {}) {
     this.stage = new Stage(canvas, { background: 0xcfc6bb });
+    this.mech = { info, title };
+    this.running = true;
     const s = this.stage;
     s.useAO = true;
     s.controls.maxPolarAngle = Math.PI * 0.49;
@@ -194,8 +197,9 @@ export class DisplayRoom {
     holder.userData.item = true;
     holder.rotation.y = rotY;
     this.stage.scene.add(holder);
-    const item = { name, holder };
+    const item = { name, holder, model, obj };
     this.items.push(item);
+    if (this.running) await this._spin(item);
     holder.traverse(o => (o.userData.owner = item));
     if (pos) holder.position.fromArray(pos);
     else holder.position.copy(this._freeSpot(holder));
@@ -232,6 +236,22 @@ export class DisplayRoom {
     return best ? best.p : new THREE.Vector3(0, y, zc);
   }
 
+  async _spin(item) {
+    if (!this.mech.info) return;
+    const objects = new Map(item.obj.children.map(o => [o.userData.partId, o]));
+    const { entries } = await mechanismFor(item.model.parts, objects, this.mech.info, this.mech.title);
+    if (entries.length) item.spinner = new Spinner(this.stage, entries);
+  }
+
+  async setRunning(on) {
+    this.running = on;
+    for (const i of this.items) {
+      i.spinner?.stop();
+      i.spinner = null;
+      if (on) await this._spin(i);
+    }
+  }
+
   select(item) {
     this.selected = item;
     this.stage.outline.selectedObjects = item ? [item.holder] : [];
@@ -239,13 +259,17 @@ export class DisplayRoom {
 
   removeSelected() {
     if (!this.selected) return;
+    this.selected.spinner?.stop();
     this.stage.scene.remove(this.selected.holder);
     this.items = this.items.filter(i => i !== this.selected);
     this.select(null);
   }
 
   clear() {
-    for (const i of this.items) this.stage.scene.remove(i.holder);
+    for (const i of this.items) {
+      i.spinner?.stop();
+      this.stage.scene.remove(i.holder);
+    }
     this.items = [];
     this.select(null);
   }
