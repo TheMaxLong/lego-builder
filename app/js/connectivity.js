@@ -9,7 +9,30 @@ const TOP_STUD = /^(stud|studa|stud2|stud2a|stud6|stud6a|stud10|stud13|stud15|st
 
 const STUD = 20; // LDU between stud centres
 
-const cache = new Map(); // lowercased file -> Promise<{studs, sideStuds, min, max}>
+const cache = new Map(); // lowercased file -> Promise<{studs, sideStuds, min, max, hull}>
+
+// 26 directions: axes, edge diagonals, corner diagonals. Each file keeps only its most extreme
+// point along each, so a sub-part turned by quarter or eighth turns still measures exactly
+// (turning a plain bounding box instead over-measures sloped faces: a ridge read 40 tall, not 24).
+const DIRS = [];
+for (const x of [-1, 0, 1]) for (const y of [-1, 0, 1]) for (const z of [-1, 0, 1]) if (x || y || z) DIRS.push([x, y, z]);
+function extremes(points) {
+  if (!points.length) return [];
+  const keep = new Set();
+  for (const d of DIRS) {
+    let best = 0;
+    let bv = -Infinity;
+    points.forEach((p, i) => {
+      const v = p[0] * d[0] + p[1] * d[1] + p[2] * d[2];
+      if (v > bv) {
+        bv = v;
+        best = i;
+      }
+    });
+    keep.add(best);
+  }
+  return [...keep].map(i => points[i]);
+}
 
 function baseName(f) {
   return f.replace(/\\/g, '/').toLowerCase();
@@ -24,8 +47,10 @@ function analyzeFile(file, getText) {
   if (cache.has(key)) return cache.get(key);
   const job = (async () => {
     const shortName = key.split('/').pop();
-    const res = { studs: [], sideStuds: [], min: [Infinity, Infinity, Infinity], max: [-Infinity, -Infinity, -Infinity] };
+    const res = { studs: [], sideStuds: [], min: [Infinity, Infinity, Infinity], max: [-Infinity, -Infinity, -Infinity], hull: [] };
+    const pts = [];
     const grow = v => {
+      pts.push(v);
       for (let i = 0; i < 3; i++) {
         if (v[i] < res.min[i]) res.min[i] = v[i];
         if (v[i] > res.max[i]) res.max[i] = v[i];
@@ -34,8 +59,8 @@ function analyzeFile(file, getText) {
     if (TOP_STUD.test(shortName)) {
       // A stud primitive: its origin is the base centre, it rises 4 LDU along -Y.
       res.studs.push([0, 0, 0]);
-      grow([-6, -4, -6]);
-      grow([6, 0, 6]);
+      for (const x of [-6, 6]) for (const y of [-4, 0]) for (const z of [-6, 6]) grow([x, y, z]);
+      res.hull = extremes(pts);
       return res;
     }
     const text = await getText(file);
@@ -69,12 +94,9 @@ function analyzeFile(file, getText) {
         const d = apply3(s.rot, ss.dir);
         res.sideStuds.push({ pos: place(ss.pos), dir: d });
       }
-      if (r.min[0] !== Infinity) {
-        for (const x of [r.min[0], r.max[0]])
-          for (const y of [r.min[1], r.max[1]])
-            for (const z of [r.min[2], r.max[2]]) grow(place([x, y, z]));
-      }
+      for (const h of r.hull) grow(place(h));
     });
+    res.hull = extremes(pts);
     return res;
   })();
   cache.set(key, job);

@@ -194,6 +194,7 @@ async function roof(m, color, x0, z0, w, d, level) {
 /** 2x2 wheel-pin plate under a chassis at stud (x,z), pins sticking out along z, with rims and tyres. */
 async function axle(m, x, z, level, rim = C.lbg) {
   const hub = await m.at('4600', C.black, x, z, level, 1);
+  hub.pos[1] = -(level + 1) * 8; // plate top flush under the chassis (its pins would skew a size-based fit)
   for (const side of [-1, 1]) {
     const w = m.with(hub, '4624', rim, [side * WHEEL_OUT, WHEEL_Y, 0], quarterTurn('y', side > 0 ? 1 : 3));
     m.with(w, '3641', C.black);
