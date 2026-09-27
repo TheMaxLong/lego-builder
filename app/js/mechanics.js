@@ -8,6 +8,7 @@ import { apply3 } from './ldr.js';
 
 const ROTOR = /\b(Gear|Axle|Propeller|Bush|Wheel|Rim|Tyre|Tire|Hub|Rotor|Pulley|Turntable)\b/i;
 const NOT_SPUR = /Bevel|Crown|Worm|Rack|Differential|Knob|Clutch Ring|Driving Ring/i;
+const FIXED = /Turntable.*Base|Base.*Turntable/i; // the half of a turntable that stays put
 const TOOTH_RADIUS = 1.25; // Technic spur gears: pitch radius = teeth * 1.25 LDU (8t=10, 24t=30, 40t=50)
 
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
@@ -38,7 +39,7 @@ export async function analyze(parts, info, title) {
   const rotors = [];
   for (const p of parts) {
     const t = title(p.file) || '';
-    if (!ROTOR.test(t) && !p.motor) continue;
+    if ((!ROTOR.test(t) || FIXED.test(t)) && !p.motor) continue;
     const i = await info(p.file);
     const ext = [0, 1, 2].map(k => i.max[k] - i.min[k]);
     // Axles turn about their long dimension; discs (gears, wheels, bushes, propellers) about their thin one.
@@ -74,6 +75,44 @@ export async function analyze(parts, info, title) {
     groups.get(g).push(r);
   });
   const shafts = [...groups.values()].map(rs => ({ axis: rs[0].axis, point: rs[0].centre, ids: rs.map(r => r.id), rotors: rs, omega: 0, driven: false }));
+  // Riders: anything whose underside sits on the studs of a turning part turns with it (and so on up).
+  const placeAll = (p, pts) => pts.map(v => {
+    const w = apply3(p.rot, v);
+    return [w[0] + p.pos[0], w[1] + p.pos[1], w[2] + p.pos[2]];
+  });
+  const assigned = new Set(rotors.map(r => r.id));
+  const byId = new Map(parts.map(p => [p.id, p]));
+  const infos = new Map();
+  for (const p of parts) if (!infos.has(p.file)) infos.set(p.file, await info(p.file));
+  if (rotors.length)
+    for (const s of shafts) {
+      const studs = [];
+      for (const id of s.ids) studs.push(...placeAll(byId.get(id), infos.get(byId.get(id).file).studs));
+      for (let grew = true; grew; ) {
+        grew = false;
+        for (const p of parts) {
+          if (assigned.has(p.id)) continue;
+          const i = infos.get(p.file);
+          const socks = placeAll(p, i.sockets);
+          const loose = i.sockets.length === 1 ? 12 : 1.5; // one-socket parts (minifig legs) sit between studs
+          let sits = socks.some(k => studs.some(t => Math.abs(t[1] - k[1]) < 1.5 && Math.hypot(t[0] - k[0], t[2] - k[2]) < loose));
+          // Minifig pieces join by pegs, not studs: same centre line (or a held item beside a torso) = same figure.
+          if (!sits && /^Minifig/i.test(title(p.file) || '')) {
+            const reach = /Accessory/i.test(title(p.file)) ? 45 : 4;
+            sits = s.ids.some(id => {
+              const q = byId.get(id);
+              return /^Minifig/i.test(title(q.file) || '') && Math.hypot(q.pos[0] - p.pos[0], q.pos[2] - p.pos[2]) < reach && Math.abs(q.pos[1] - p.pos[1]) <= 60;
+            });
+          }
+          if (!sits) continue;
+          assigned.add(p.id);
+          s.ids.push(p.id);
+          studs.push(...placeAll(p, i.studs));
+          grew = true;
+        }
+      }
+    }
+
   const shaftOf = new Map();
   shafts.forEach((s, i) => s.rotors.forEach(r => shaftOf.set(r, i)));
 

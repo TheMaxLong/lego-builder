@@ -527,12 +527,15 @@ await make(home, 'bookshelf', 'Bookshelf', 'Tall shelf full of colourful books',
 const workshop = category('Workshop', 'Machines with real gear trains — press ▶ Run');
 const ALONG_Z = quarterTurn('y', 1); // turns an axle (long along x) to run front-to-back
 
-/** A standing minifig: feet on y=0 at (x, z); x must be a multiple of 20, z = 10 mod 20. */
-function figure(m, x, z, torso, torsoColor, legsColor, hat, hatColor, head = '3626c') {
-  m.raw('970c00', legsColor, [x, -40, z]);
-  m.raw(torso, torsoColor, [x, -72, z]);
-  m.raw(head, C.yellow, [x, -96, z]);
-  if (hat) m.raw(hat, hatColor, [x, -96, z]);
+/** A standing minifig with feet at height y0 (LDraw), centred at (x, z), facing -z turned `turn` quarter turns. */
+function figure(m, x, z, torso, torsoColor, legsColor, hat, hatColor, head = '3626c', y0 = 0, turn = 0) {
+  const r = quarterTurn('y', turn);
+  m.raw('3815b', legsColor, [x, y0 - 40, z], r); // hips + two legs (the one-piece 970c00 is an obsolete redirect)
+  m.raw('3816c', legsColor, [x, y0 - 28, z], r);
+  m.raw('3817c', legsColor, [x, y0 - 28, z], r);
+  m.raw(torso, torsoColor, [x, y0 - 72, z], r);
+  m.raw(head, C.yellow, [x, y0 - 96, z], r);
+  if (hat) m.raw(hat, hatColor, [x, y0 - 96, z], r);
 }
 
 await make(workshop, 'propeller-gearbox', 'Propeller gearbox', 'Turn the red hand wheel: 40 → 8 → 24 → 24 teeth spins the propeller 5× faster', async m => {
@@ -596,6 +599,30 @@ await make(workshop, 'windmill', 'Windmill', 'Brick tower with four sails on a t
   m.raw('2952', C.white, [cx, y, zf - 30], quarterTurn('z', 1));
   m.nextStep();
   figure(m, 60, 150, '76382p0e', C.white, C.sand, '3901', C.reddishBrown); // the miller, behind the tower and clear of the sails
+});
+
+
+await make(workshop, 'carousel', 'Carousel', 'A turntable ride: four riders under a red canopy go round together', async m => {
+  await m.at('3867', C.tan, 0, 0, 0);
+  for (const [x, z] of [[0, 0], [15, 0], [0, 15], [15, 15]]) {
+    await m.at('3062b', C.white, x, z, 1);
+    await m.at('3062b', C.transYellow, x, z, 4);
+  }
+  m.nextStep();
+  const base = await m.at('3403', C.dbg, 6, 6, 1);
+  m.with(base, '3404', C.dbg).motor = 5; // the turning top is the motor
+  m.nextStep();
+  await m.at('74611', C.yellow, 4, 4, 4); // round 8x8 platform
+  for (let i = 0; i < 6; i++) await m.at('3941', i % 2 ? C.white : C.red, 7, 7, 5 + i * 3); // striped pole
+  m.nextStep();
+  await m.at('3961', C.red, 4, 4, 23); // canopy
+  await m.at('3942c', C.yellow, 7, 7, 26);
+  m.nextStep();
+  const y0 = -5 * 8; // riders stand on the platform
+  figure(m, 160, 110, '973c01', C.red, C.blue, '3901', C.brown, '3626c', y0, 0);
+  figure(m, 160, 210, '76382p0e', C.white, C.sand, '3901', C.black, '3626c', y0, 2);
+  figure(m, 110, 160, '973c01', C.green, C.black, '3833', C.yellow, '3626c', y0, 1);
+  figure(m, 210, 160, '973c01', C.yellow, C.red, '3901', C.orange, '3626c', y0, 3);
 });
 
 await fs.writeFile(path.join(OUT, 'index.json'), JSON.stringify(catalog, null, 1));

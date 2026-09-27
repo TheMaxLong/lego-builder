@@ -217,13 +217,19 @@
     "file": "propeller-gearbox.ldr",
     "title": "Propeller gearbox",
     "desc": "Turn the red hand wheel: 40 → 8 → 24 → 24 teeth spins the propeller 5× faster",
-    "parts": 35
+    "parts": 37
    },
    {
     "file": "windmill.ldr",
     "title": "Windmill",
     "desc": "Brick tower with four sails on a turning axle",
-    "parts": 71
+    "parts": 73
+   },
+   {
+    "file": "carousel.ldr",
+    "title": "Carousel",
+    "desc": "A turntable ride: four riders under a red canopy go round together",
+    "parts": 44
    }
   ]
  }

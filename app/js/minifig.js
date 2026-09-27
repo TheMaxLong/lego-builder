@@ -28,7 +28,7 @@ export const SLOTS = {
 export const DEFAULTS = {
   head: { file: '3626c.dat', color: 14 },
   torso: { file: '973c01.dat', color: 4 },
-  legs: { file: '970c00.dat', color: 1 },
+  legs: { file: 'plain', color: 1 },
   hat: { file: '3901.dat', color: 6 },
   item: { file: '', color: 0 },
 };
@@ -41,7 +41,11 @@ export function options(slot) {
 export function assemble(fig) {
   const parts = [];
   const add = (file, color, pos, rot = IDENTITY) => file && parts.push({ id: 0, file, color, pos, rot: [...rot], step: 0 });
-  add(fig.legs.file, fig.legs.color, [0, LEGS_Y, 0]);
+  if (fig.legs.file === 'plain' || !fig.legs.file) {
+    add('3815b.dat', fig.legs.color, [0, LEGS_Y, 0]);
+    add('3816c.dat', fig.legs.color, [0, LEGS_Y + 12, 0]);
+    add('3817c.dat', fig.legs.color, [0, LEGS_Y + 12, 0]);
+  } else add(fig.legs.file, fig.legs.color, [0, LEGS_Y, 0]);
   add(fig.torso.file, fig.torso.color, [0, TORSO_Y, 0]);
   add(fig.head.file, fig.head.color, [0, HEAD_Y, 0]);
   if (fig.hat?.file) add(fig.hat.file, fig.hat.color, [0, HEAD_Y, 0]);

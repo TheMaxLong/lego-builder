@@ -170,3 +170,17 @@ test('motor marks survive save and load', () => {
   const back = parseLdr(serializeLdr(m));
   assert.equal(back.parts[0].motor, 12);
 });
+
+test('carousel: everything standing on the turntable top rides it, the base and corner lights do not', async () => {
+  const { analyze } = await import('../app/js/mechanics.js');
+  const m = parseLdr(await fs.readFile(new URL('../app/presets/carousel.ldr', import.meta.url), 'utf8'));
+  const titles = new Map();
+  for (const p of m.parts) titles.set(p.file, ((await getText(p.file)) || '').split('\n')[0].replace(/^0\s*/, ''));
+  const r = await analyze(m.parts, f => analyzePart(f, getText), f => titles.get(f));
+  const turning = r.shafts.filter(s => s.omega);
+  assert.equal(turning.length, 1);
+  const riding = new Set(turning[0].ids.map(id => m.parts.find(p => p.id === id).file));
+  for (const f of ['3404.dat', '74611.dat', '3941.dat', '3961.dat', '3942c.dat', '3815b.dat', '3816c.dat', '3817c.dat', '973c01.dat', '3626c.dat', '3901.dat', '76382p0e.dat', '3833.dat']) assert.ok(riding.has(f), `${f} should ride`);
+  for (const f of ['3403.dat', '3867.dat', '3062b.dat']) assert.ok(!riding.has(f), `${f} should stay put`);
+  assert.equal(turning[0].ids.length, 34); // turntable top, platform, 6 pole bricks, canopy, cone + 4 riders x 6 pieces
+});

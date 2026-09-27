@@ -119,12 +119,15 @@ export function footprintSockets(min, max, studs = []) {
   const cx = (min[0] + max[0]) / 2;
   const cz = (min[2] + max[2]) / 2;
   if (nx < 1 || nz < 1 || Math.abs(w - nx * STUD) > 4 || Math.abs(d - nz * STUD) > 4) {
+    // Odd outline (round plates, dishes): its studs show where the anti-studs are underneath.
+    if (studs.length > 1) return studs.map(s => [s[0], y, s[2]]);
     return [[round(cx), y, round(cz)]];
   }
   // Align to the part's own stud columns when it has studs (so off-centre parts line up).
   let ox = cx - ((nx - 1) * STUD) / 2;
   let oz = cz - ((nz - 1) * STUD) / 2;
-  if (studs.length) {
+  // (a lone centre stud, as on a 4x4 dish, says nothing about the grid underneath)
+  if (studs.length > 1) {
     const fx = studs[0][0] - ox;
     const fz = studs[0][2] - oz;
     ox += fx - Math.round(fx / STUD) * STUD;

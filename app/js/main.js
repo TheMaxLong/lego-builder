@@ -894,7 +894,7 @@ async function renderMinifig() {
   let html = '<div id="mf-preview" role="img" aria-label="Minifigure preview"></div>';
   for (const [slot, def] of Object.entries(minifig.SLOTS)) {
     const opts = minifig.options(slot);
-    html += `<div class="mf-slot"><label for="mf-${slot}">${def.label}</label><select id="mf-${slot}" data-slot="${slot}">${def.optional ? '<option value="">None</option>' : ''}${opts
+    html += `<div class="mf-slot"><label for="mf-${slot}">${def.label}</label><select id="mf-${slot}" data-slot="${slot}">${def.optional ? '<option value="">None</option>' : ''}${slot === 'legs' ? '<option value="plain">Plain legs</option>' : ''}${opts
       .map(p => `<option value="${esc(p.file)}">${esc(p.title.replace(/^Minifig /, ''))}</option>`)
       .join('')}</select><span></span><select data-color="${slot}" aria-label="${def.label} colour">${colorOptions(fig[slot]?.color)}</select></div>`;
   }
