@@ -96,7 +96,10 @@ export async function saveDisplay(name, data) {
   return n;
 }
 export async function listDisplays() {
-  return (await platform.listDir(folder('displays'))).filter(e => e.name.endsWith('.json')).map(e => e.name.replace(/\.json$/, ''));
+  return (await platform.listDir(folder('displays')))
+    .filter(e => e.name.endsWith('.json'))
+    .sort((a, b) => b.modified - a.modified) // newest first
+    .map(e => e.name.replace(/\.json$/, ''));
 }
 export async function readDisplay(name) {
   const t = await platform.readText(`${folder('displays')}/${safeName(name)}.json`);
