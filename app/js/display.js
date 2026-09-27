@@ -6,11 +6,11 @@ import { Stage } from './scene.js';
 import { modelObject } from './models.js';
 import * as store from './store.js';
 
-const TABLE = { w: 180, d: 100, top: 0, thick: 4, legH: 72 };
+const TABLE = { w: 280, d: 150, top: 0, thick: 5, legH: 80 };
 const FLOOR_Y = -TABLE.legH - TABLE.thick;
-const WALL_Z = -95;
+const WALL_Z = -120;
 const SHELVES = [34, 68]; // board heights above the table top
-const SHELF = { w: 170, d: 26 };
+const SHELF = { w: 250, d: 30 };
 
 function woodTexture(base = '#a8733f', dark = '#8a5a2e') {
   const c = document.createElement('canvas');
@@ -54,8 +54,8 @@ export class DisplayRoom {
     s.controls.maxPolarAngle = Math.PI * 0.49;
     s.controls.minDistance = 20;
     s.controls.maxDistance = 600;
-    s.camera.position.set(0, 70, 190);
-    s.controls.target.set(0, 10, -10);
+    s.camera.position.set(130, 140, 240);
+    s.controls.target.set(0, 12, -25);
     this.items = []; // { name, holder, rotY }
     this.selected = null;
     this.furniture = 'table';
@@ -89,7 +89,7 @@ export class DisplayRoom {
     room.add(back);
     const side = new THREE.Mesh(new THREE.PlaneGeometry(900, 400), wallMat);
     side.rotation.y = Math.PI / 2;
-    side.position.set(-260, FLOOR_Y + 200, 0);
+    side.position.set(-320, FLOOR_Y + 200, 0);
     side.receiveShadow = true;
     room.add(side);
 
@@ -173,7 +173,7 @@ export class DisplayRoom {
   }
 
   _refit() {
-    const box = new THREE.Box3().setFromCenterAndSize(new THREE.Vector3(0, 30, -30), new THREE.Vector3(220, 120, 160));
+    const box = new THREE.Box3().setFromCenterAndSize(new THREE.Vector3(0, 30, -40), new THREE.Vector3(320, 140, 230));
     this.stage.fitShadows(box);
   }
 
@@ -204,6 +204,7 @@ export class DisplayRoom {
   }
 
   _footprint(holder) {
+    holder.updateMatrixWorld(true);
     return new THREE.Box3().setFromObject(holder);
   }
 
@@ -213,16 +214,22 @@ export class DisplayRoom {
     const onTable = this.table.visible;
     const y = onTable ? TABLE.top : TABLE.top + SHELVES[0];
     const zc = onTable ? 0 : WALL_Z - 30 + SHELF.d / 2;
-    for (let r = 0; r < 12; r++) {
-      for (let a = 0; a < Math.max(1, r * 6); a++) {
-        const ang = (a / Math.max(1, r * 6)) * Math.PI * 2;
-        const p = new THREE.Vector3(Math.cos(ang) * r * 14, y, zc + Math.sin(ang) * r * 9);
-        const box = new THREE.Box3().setFromCenterAndSize(new THREE.Vector3(p.x, y + size.y / 2, p.z), size);
-        if (Math.abs(p.x) + size.x / 2 > TABLE.w / 2 || Math.abs(p.z - zc) + size.z / 2 > (onTable ? TABLE.d : SHELF.d) / 2) continue;
-        if (!others.some(o => o.intersectsBox(box))) return p;
+    const halfW = (onTable ? TABLE.w : SHELF.w) / 2;
+    const halfD = (onTable ? TABLE.d : SHELF.d) / 2;
+    const overlap = box =>
+      others.reduce((sum, o) => {
+        const i = o.clone().intersect(box);
+        return sum + (i.isEmpty() ? 0 : i.getSize(new THREE.Vector3()).x * i.getSize(new THREE.Vector3()).z);
+      }, 0);
+    // Scan a grid across the surface; take the free spot nearest the middle, else the least-crowded one.
+    let best = null;
+    for (let x = -halfW + size.x / 2; x <= halfW - size.x / 2 + 0.01; x += 6)
+      for (let z = zc - halfD + size.z / 2; z <= zc + halfD - size.z / 2 + 0.01; z += 6) {
+        const box = new THREE.Box3().setFromCenterAndSize(new THREE.Vector3(x, y + size.y / 2, z), size);
+        const score = overlap(box) * 1000 + Math.hypot(x, z - zc);
+        if (!best || score < best.score) best = { score, p: new THREE.Vector3(x, y, z) };
       }
-    }
-    return new THREE.Vector3(0, y, zc);
+    return best ? best.p : new THREE.Vector3(0, y, zc);
   }
 
   select(item) {
