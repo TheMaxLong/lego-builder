@@ -120,3 +120,35 @@ export function roundRot(m) {
     return Object.is(r, -0) ? 0 : r;
   });
 }
+
+/**
+ * Expand references to submodels (MPD "0 FILE" blocks without their own geometry) into their
+ * library parts, composing transforms and passing colour 16 down. Blocks that DO carry geometry
+ * are embedded custom parts: they stay as parts and remain in `submodels` so they still load/save.
+ */
+export function flattenModel(model) {
+  const blocks = new Map((model.submodels || []).map(s => [s.file.toLowerCase(), s.text]));
+  const isAssembly = text => !/^\s*[2345]\s/m.test(text);
+  const keep = [];
+  const out = [];
+  const walk = (parts, parentPos, parentRot, parentColor, step, depth) => {
+    for (const p of parts) {
+      const color = p.color === 16 || p.color === '16' ? parentColor : p.color;
+      const w = apply3(parentRot, p.pos);
+      const pos = [w[0] + parentPos[0], w[1] + parentPos[1], w[2] + parentPos[2]];
+      const rot = mul3(parentRot, p.rot);
+      const sub = blocks.get(p.file.toLowerCase());
+      if (sub != null && isAssembly(sub) && depth < 32) {
+        walk(parseLdr(sub).parts, pos, rot, color, step ?? p.step, depth + 1);
+      } else {
+        if (sub != null) keep.push(p.file.toLowerCase());
+        out.push({ id: newId(), file: p.file, color, pos: pos.map(v => Math.round(v * 1000) / 1000), rot: roundRot(rot), step: step ?? p.step });
+      }
+    }
+  };
+  walk(model.parts, [0, 0, 0], IDENTITY, 16, null, 0);
+  const keepSet = new Set(keep);
+  // embedded parts may reference each other; keep every geometry block to be safe
+  const submodels = (model.submodels || []).filter(s => keepSet.has(s.file.toLowerCase()) || !isAssembly(s.text));
+  return { name: model.name, parts: out, submodels };
+}

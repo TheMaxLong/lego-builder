@@ -92,3 +92,25 @@ test('tile has no studs but still has sockets', async () => {
 test('footprint of an odd-shaped part falls back to one centre socket', () => {
   assert.deepEqual(footprintSockets([-7, 0, -7], [7, 10, 7]), [[0, 10, 0]]);
 });
+
+test('flattenModel expands MPD submodels into library parts with composed placement + colour', async () => {
+  const { flattenModel, parseLdr } = await import('../app/js/ldr.js');
+  const text = [
+    '0 FILE main.ldr',
+    '1 4 100 0 0 0 0 1 0 1 0 -1 0 0 wing.ldr', // wing rotated a quarter turn about y, colour red
+    '1 15 0 -24 0 1 0 0 0 1 0 0 0 1 3001.dat',
+    '0 FILE wing.ldr',
+    '1 16 20 0 0 1 0 0 0 1 0 0 0 1 3003.dat', // inherits red
+    '1 1 0 0 0 1 0 0 0 1 0 0 0 1 custom.dat',
+    '0 FILE custom.dat',
+    '3 16 0 0 0 10 0 0 0 0 10',
+  ].join('\n');
+  const f = flattenModel(parseLdr(text));
+  const byFile = Object.fromEntries(f.parts.map(p => [p.file, p]));
+  assert.equal(f.parts.length, 3);
+  assert.equal(byFile['3003.dat'].color, 4);
+  assert.deepEqual(byFile['3003.dat'].pos, [100, 0, -20]); // (20,0,0) turned: x->-z
+  assert.equal(byFile['3001.dat'].color, 15);
+  assert.equal(byFile['custom.dat'].color, 1);
+  assert.deepEqual(f.submodels.map(s => s.file), ['custom.dat']);
+});

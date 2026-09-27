@@ -32,6 +32,7 @@ export class Builder extends EventTarget {
     this.clipboard = null;
     this.stepCounter = 0;
     this.worldStudCache = new Map();
+    this.showEdges = true;
     this.raycaster = new THREE.Raycaster();
     this.pointer = new THREE.Vector2();
     this.groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
@@ -138,6 +139,7 @@ export class Builder extends EventTarget {
             o.matrix.copy(placementMatrix(p.pos, p.rot));
             o.userData = { partId: p.id, key, pose };
             o.visible = !this.hidden.has(p.id);
+            if (!this.showEdges) o.traverse(l => l.isLineSegments && (l.visible = false));
             this.stage.root.add(o);
             this.objects.set(p.id, o);
             this.worldStudCache.delete(p.id);
@@ -177,7 +179,7 @@ export class Builder extends EventTarget {
   // ---------- ghost (the see-through part following the cursor) ----------
 
   /** Start carrying parts. items are LDraw placements; they keep their relative layout. */
-  async carry(items, { keepIds = false } = {}) {
+  async carry(items, { keepIds = false, grab = null } = {}) {
     this.cancelGhost();
     if (!items.length) return;
     const infos = await Promise.all(items.map(i => lib.partInfo(i.file)));
@@ -215,7 +217,8 @@ export class Builder extends EventTarget {
     });
     group.visible = false;
     this.cursorGhost.add(group);
-    this.ghost = { items: rel, infos, rot: [...IDENTITY], grab: low[0], group, target: null, valid: false, keepIds };
+    this.ghost = { items: rel, infos, rot: [...IDENTITY], grab: grab || low[0], group, target: null, valid: false, keepIds };
+    this.dispatchEvent(new Event('ghost'));
     this._updateGhost();
   }
 

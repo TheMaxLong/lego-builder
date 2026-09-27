@@ -111,6 +111,7 @@ progress { width: 220px; }
 #color-current { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-bottom: 8px; }
 .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(24px, 1fr)); gap: 4px; margin-top: 8px; }
 .swatch { width: 100%; aspect-ratio: 1; border-radius: 6px; border: 1px solid rgb(0 0 0 / 18%); cursor: pointer; padding: 0; position: relative; }
+.more-colors { grid-column: span 2; font-size: 11px; padding: 0 4px; border-radius: 6px; }
 .swatch.big { width: 26px; height: 26px; cursor: default; }
 .swatch.on { outline: 2px solid var(--focus); outline-offset: 1px; }
 .swatch.trans { background-image: linear-gradient(45deg, rgb(255 255 255 / 45%) 25%, transparent 25%, transparent 75%, rgb(255 255 255 / 45%) 75%); background-size: 8px 8px; }

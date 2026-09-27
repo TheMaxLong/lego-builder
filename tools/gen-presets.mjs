@@ -312,12 +312,12 @@ const nature = category('Nature', 'Trees, flowers, rocks and water');
 await make(nature, 'oak-tree', 'Oak tree', 'Round leafy tree on a brown trunk', async m => {
   await m.at('3062b', C.reddishBrown, 1, 1, 0);
   await m.at('3062b', C.reddishBrown, 1, 1, 3);
-  await m.at('3470', C.green, 0, 0, 6);
+  await m.at('3470', C.green, 1, 1, 6);
 });
 
 await make(nature, 'pine-tree', 'Pine tree', 'Tall pointed evergreen', async m => {
   await m.at('3062b', C.reddishBrown, 1, 1, 0);
-  await m.at('2435', C.darkGreen, 0, 0, 3);
+  await m.at('2435', C.darkGreen, 1, 1, 3);
 });
 
 await make(nature, 'bush', 'Bush', 'Low round bush', async m => {
