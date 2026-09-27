@@ -3,7 +3,7 @@
 A Mac app for building your own brick creations in 3D, CAD-style: orbit the model, click
 bricks onto studs, and keep everything on your own disk.
 
-- The whole [LDraw](https://www.ldraw.org) parts library: 20,000+ real parts, searchable, with thumbnails
+- The whole [LDraw](https://www.ldraw.org) parts library: 15,500+ real parts (37,000 library files), searchable, with thumbnails
 - Snap-to-stud placement with a see-through preview, turning, tilting, multi-select, copy/paste, mirror
 - Paint mode, hide/isolate, undo/redo, autosave with version history
 - Preset catalogs (town, nature, castle, space, interiors, workshop) and a browser for the 1,470 official Lego set models in the LDraw Official Model Repository
