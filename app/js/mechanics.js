@@ -25,6 +25,18 @@ function canon(v) {
   return u;
 }
 
+/**
+ * Which local axis a part spins about. Round parts are symmetric about their spin axis, so the
+ * two other extents match (gears, axles, bushes, rims, turntables). Otherwise (propellers):
+ * axles by their long side, anything else by its thin side.
+ */
+export function spinAxis(ext, title = '') {
+  const pairs = [[0, 1, 2], [0, 2, 1], [1, 2, 0]].map(([a, b, axis]) => ({ axis, diff: Math.abs(ext[a] - ext[b]) / Math.max(ext[a], ext[b], 1e-6) }));
+  pairs.sort((p, q) => p.diff - q.diff);
+  if (pairs[0].diff < 0.05 && pairs[1].diff > 0.05) return pairs[0].axis;
+  return /\bAxle\b/i.test(title) ? ext.indexOf(Math.max(...ext)) : ext.indexOf(Math.min(...ext));
+}
+
 export function gearTeeth(title) {
   if (!title || NOT_SPUR.test(title)) return 0;
   const m = title.match(/Gear\s+(\d+)\s+Tooth/i);
@@ -42,8 +54,7 @@ export async function analyze(parts, info, title) {
     if ((!ROTOR.test(t) || FIXED.test(t)) && !p.motor) continue;
     const i = await info(p.file);
     const ext = [0, 1, 2].map(k => i.max[k] - i.min[k]);
-    // Axles turn about their long dimension; discs (gears, wheels, bushes, propellers) about their thin one.
-    const k = /\bAxle\b/i.test(t) && !/Gear|Wheel|Bush/i.test(t) ? ext.indexOf(Math.max(...ext)) : ext.indexOf(Math.min(...ext));
+    const k = spinAxis(ext, t);
     const e = [0, 0, 0];
     e[k] = 1;
     const centreLocal = [0, 1, 2].map(n => (i.min[n] + i.max[n]) / 2);

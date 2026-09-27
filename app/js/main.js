@@ -266,6 +266,30 @@ function onModelChange() {
   $('#show-all').hidden = !builder.hidden.size;
 }
 
+// Creations saved outside the app (or before thumbnails existed) get their picture drawn on first sight.
+const thumbJobs = new Map();
+function creationThumb(img, name) {
+  img.addEventListener(
+    'error',
+    () => {
+      if (!thumbJobs.has(name))
+        thumbJobs.set(
+          name,
+          (async () => {
+            const m = await store.readModel(`${store.folder('creations')}/${store.safeName(name)}.ldr`);
+            await store.saveThumb('creation', name, await thumbs.renderObject(await modelObject(m), 256));
+          })().catch(() => null),
+        );
+      thumbJobs.get(name).then(() => {
+        img.onerror = () => (img.style.visibility = 'hidden');
+        img.src = store.thumbUrl('creation', name, Date.now());
+      });
+    },
+    { once: true },
+  );
+}
+const wireThumbs = root => root.querySelectorAll('img[data-thumb]').forEach(img => creationThumb(img, img.dataset.thumb));
+
 // ---------------- dialogs ----------------
 
 function dialog(title, bodyHtml, buttons = []) {
@@ -302,10 +326,11 @@ async function openDialog() {
   const list = await store.listCreations();
   const rows = list
     .map(
-      c => `<div class="file-row" data-open="${esc(c.name)}"><img src="${store.thumbUrl('creation', c.name, c.modified)}" alt="" onerror="this.style.visibility='hidden'"><div class="t"><b>${esc(c.name)}</b><br><small>${new Date(c.modified).toLocaleString()}</small></div><button data-versions="${esc(c.name)}">Versions</button><button data-trash="${esc(c.name)}" class="danger">Delete</button></div>`,
+      c => `<div class="file-row" data-open="${esc(c.name)}"><img data-thumb="${esc(c.name)}" src="${store.thumbUrl('creation', c.name, c.modified)}" alt=""><div class="t"><b>${esc(c.name)}</b><br><small>${new Date(c.modified).toLocaleString()}</small></div><button data-versions="${esc(c.name)}">Versions</button><button data-trash="${esc(c.name)}" class="danger">Delete</button></div>`,
     )
     .join('');
   const d = dialog('Open a creation', `${rows || '<p class="muted">Nothing saved yet.</p>'}<label class="file-row" style="justify-content:center"><input type="file" id="import-file" accept=".ldr,.mpd,.dat" hidden>Import an .ldr / .mpd file…</label>`);
+  wireThumbs(d);
   d.querySelectorAll('[data-open]').forEach(el =>
     el.addEventListener('click', async e => {
       if (e.target.closest('button')) return;
@@ -947,16 +972,20 @@ async function renderMinifig() {
 
 async function openDisplay() {
   builder.cancelGhost();
-  await save();
+  save(); // in the background; the table only needs files already on disk
   $('#display').hidden = false;
   stage.paused = true;
   if (!room) {
     room = new DisplayRoom($('#display-view'), { info: lib.partInfo, title: partTitle });
     window.app.room = room;
     wireDisplay();
-    const last = ls.get('lastDisplay', null);
+    const last = ls.get('lastDisplay', null) || (await store.listDisplays())[0];
     const data = last && (await store.readDisplay(last).catch(() => null));
-    if (data) await room.restore(data);
+    if (data) {
+      await room.restore(data);
+      $('#display-light').value = room.light;
+      $('#display-furniture').value = room.furniture;
+    }
   }
   room.stage.paused = false;
   await renderDisplayList();
@@ -972,9 +1001,10 @@ async function renderDisplayList() {
   const list = await store.listCreations();
   $('#display-list').innerHTML = list
     .map(
-      c => `<div class="file-row" data-put="${esc(c.name)}"><img src="${store.thumbUrl('creation', c.name, c.modified)}" alt="" onerror="this.style.visibility='hidden'"><div class="t"><b>${esc(c.name)}</b></div></div>`,
+      c => `<div class="file-row" data-put="${esc(c.name)}"><img data-thumb="${esc(c.name)}" src="${store.thumbUrl('creation', c.name, c.modified)}" alt=""><div class="t"><b>${esc(c.name)}</b></div></div>`,
     )
     .join('');
+  wireThumbs($('#display-list'));
   const names = await store.listDisplays();
   $('#display-choose').innerHTML = `<option value="">Saved displays…</option>${names.map(n => `<option>${esc(n)}</option>`).join('')}`;
 }

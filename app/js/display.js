@@ -252,6 +252,14 @@ export class DisplayRoom {
     }
   }
 
+  /** Point the camera at whatever is out on display. */
+  frameItems() {
+    if (!this.items.length) return;
+    const box = new THREE.Box3();
+    for (const i of this.items) box.union(this._footprint(i.holder));
+    this.stage.frame(box.expandByScalar(12));
+  }
+
   select(item) {
     this.selected = item;
     this.stage.outline.selectedObjects = item ? [item.holder] : [];
@@ -288,17 +296,25 @@ export class DisplayRoom {
 
   async restore(data) {
     this.clear();
+    const token = (this._restoring = (this._restoring || 0) + 1); // a newer restore cancels this one
     this.setFurniture(data.furniture || 'table');
     this.setLight(data.light || 'day');
     const missing = [];
     for (const it of data.items || []) {
+      if (token !== this._restoring) return missing;
       try {
-        await this.add(it.name, { pos: it.pos, rotY: it.rotY });
+        const item = await this.add(it.name, { pos: it.pos, rotY: it.rotY });
+        if (token !== this._restoring) {
+          this.select(item);
+          this.removeSelected();
+          return missing;
+        }
       } catch {
         missing.push(it.name);
       }
     }
     this.select(null);
+    this.frameItems();
     return missing;
   }
 

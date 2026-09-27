@@ -184,3 +184,14 @@ test('carousel: everything standing on the turntable top rides it, the base and 
   for (const f of ['3403.dat', '3867.dat', '3062b.dat']) assert.ok(!riding.has(f), `${f} should stay put`);
   assert.equal(turning[0].ids.length, 34); // turntable top, platform, 6 pole bricks, canopy, cone + 4 riders x 6 pieces
 });
+
+test('spin axis: gears, axles, bushes, rims, turntables and propellers', async () => {
+  const { spinAxis } = await import('../app/js/mechanics.js');
+  const ext = async f => { const i = await analyzePart(f, getText); return [0, 1, 2].map(k => i.max[k] - i.min[k]); };
+  assert.equal(spinAxis(await ext('3647.dat'), 'Technic Gear 8 Tooth'), 2);
+  assert.equal(spinAxis(await ext('3706.dat'), 'Technic Axle 6'), 0);
+  assert.equal(spinAxis(await ext('3713.dat'), 'Technic Bush with Two Flanges'), 2);
+  assert.equal(spinAxis(await ext('4624.dat'), 'Wheel Rim 6.4 x 8'), 2);
+  assert.equal(spinAxis(await ext('3404.dat'), 'Turntable 4 x 4 Top'), 1);
+  assert.equal(spinAxis(await ext('2952.dat'), 'Propeller 2 Blade 9 Diameter'), 2);
+});
